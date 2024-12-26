@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Explore Food</title>
+</head>
+<body>
+    <h1 class="text-center text-3xl text-purple-500 font-semibold my-4">Search Your Favorite Food</h1>
+
+    <!-- Search Bar -->
+    <div class="flex justify-center my-4">
+        <div>
+            <input 
+                id="search-input" 
+                class="border-2 border-purple-600 rounded p-2" 
+                type="text" 
+                placeholder="Search for food"
+            >
+            <button 
+                id="search-button" 
+                class="px-3 py-2 border-2 border-purple-600 bg-purple-600 text-white rounded hover:bg-purple-700">
+                Search
+            </button>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    <div id="error" class="text-center text-red-500 hidden">Something went wrong! Please try again.</div>
+
+    <!-- Food Details -->
+    <div class="mx-5" id="food-details"></div>
+
+    <!-- Food List -->
+    <div class="grid grid-cols-3 gap-5 mx-5" id="food-list"></div>
+
+    <script>
+        document.getElementById('error').style.display = 'none';
+
+        // Search for food
+        document.getElementById('search-button').addEventListener('click', async () => {
+            const searchInput = document.getElementById('search-input');
+            const searchText = searchInput.value.trim();
+
+            if (!searchText) {
+                showError("Please enter a search term.");
+                return;
+            }
+
+            try {
+                const url = `https://www.themealdb.com/api/json/v1/1/search.php?s=${searchText}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.meals) {
+                    displayFoods(data.meals);
+                } else {
+                    showError("No results found for your search.");
+                }
+            } catch (error) {
+                showError("Failed to fetch food. Please try again later.");
+                console.error(error);
+            }
+        });
+
+        // Display the list of foods
+        const displayFoods = (foods) => {
+            const foodList = document.getElementById('food-list');
+            foodList.innerHTML = ''; // Clear previous results
+            hideError(); // Hide error message
+
+            foods.forEach(food => {
+                const div = document.createElement('div');
+                div.classList.add('border-2', 'rounded', 'p-4', 'shadow-lg', 'cursor-pointer');
+                div.innerHTML = `
+                    <img class="h-[250px] w-full rounded mb-2" src="${food.strMealThumb}" alt="${food.strMeal}">
+                    <h3 class="text-2xl my-2">${food.strMeal}</h3>
+                `;
+                div.addEventListener('click', () => loadFoodDetails(food.idMeal));
+                foodList.appendChild(div);
+            });
+        };
+
+        // Load details for a single food
+        const loadFoodDetails = async (id) => {
+            try {
+                const url = `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.meals) {
+                    displayFoodDetails(data.meals[0]);
+                }
+            } catch (error) {
+                showError("Failed to load food details.");
+                console.error(error);
+            }
+        };
+
+        // Display details of a single food
+        const displayFoodDetails = (food) => {
+            const foodDetails = document.getElementById('food-details');
+            foodDetails.innerHTML = ''; // Clear previous details
+            foodDetails.innerHTML = `
+                <div class="my-10 border-2 rounded p-4 shadow-lg">
+                    <img class="w-96 h-[400px] rounded mb-4" src="${food.strMealThumb}" alt="${food.strMeal}">
+                    <h3 class="text-3xl font-semibold mb-4">${food.strMeal}</h3>
+                    <p><strong>Category:</strong> ${food.strCategory}</p>
+                    <p><strong>Area:</strong> ${food.strArea}</p>
+                    <p><strong>Instructions:</strong> ${food.strInstructions}</p>
+                    <h4 class="text-xl font-semibold mt-4">Ingredients:</h4>
+                    <ul>
+                        ${getIngredients(food).map(ingredient => `<li>${ingredient}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            foodDetails.scrollIntoView({ behavior: "smooth" }); // Scroll to the top of food details
+        };
+
+        // Extract ingredients and measures from the food object
+        const getIngredients = (food) => {
+            const ingredients = [];
+            for (let i = 1; i <= 20; i++) {
+                const ingredient = food[`strIngredient${i}`];
+                const measure = food[`strMeasure${i}`];
+                if (ingredient) {
+                    ingredients.push(`${measure ? measure : ''} ${ingredient}`.trim());
+                }
+            }
+            return ingredients;
+        };
+
+        // Utility functions
+        const showError = (message) => {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        };
+
+        const hideError = () => {
+            const errorDiv = document.getElementById('error');
+            errorDiv.style.display = 'none';
+        };
+    </script>
+</body>
+</html>
